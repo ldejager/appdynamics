@@ -14,3 +14,4 @@ The templates referred to in the init.pp are the standard configuration files, w
 Deployment is done via an RPM which is built using FPM from the tarballs provided by AppDynamics i.e.
 
 * fpm -s dir -t rpm -n appdynamics -v 3.7.15 --iteration 0 --description "AppDynamics Application and Machine Agent" -a all opt/ etc/
+
