@@ -1,4 +1,6 @@
 class appdynamics::agent::install {
+	
+	Package {  schedule => always }
 
         package{ "appdynamics":
                 ensure	=> "$appdynamics::version",

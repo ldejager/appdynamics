@@ -1,7 +1,5 @@
 class appdynamics::agent::config {
 
-	Package {  schedule => always, }
-
         group { 'appdynamics':
                 ensure  => present,
                 gid     => 5900,
