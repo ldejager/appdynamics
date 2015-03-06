@@ -16,14 +16,14 @@ import xml.etree.ElementTree as ET
 
 class HealthRules(object):
     """
-    Class for all things Health Rules related
+    Class for AppDynamics Health Rule exporting and importing using a RESTful API
     """
 
     CONFIG = os.path.dirname(os.path.abspath(__file__)) + '/config.ini'
 
     def __connect__(self, controller, path):
         """
-        Connect to given controller
+        Connect to given controller and retrieve the requested URI
         """
 
         parser = SafeConfigParser()
@@ -33,13 +33,16 @@ class HealthRules(object):
         password = parser.get(controller, 'password')
         appdyurl = parser.get(controller, 'url')
 
-        connect = requests.get(appdyurl+path, auth=HTTPBasicAuth(username, password))
-
-        return connect
+        try:
+            connect = requests.get(appdyurl+path, auth=HTTPBasicAuth(username, password))
+            return connect
+        except:
+            print "There was an error retrieving the required information from the controller:\n\n"
+            raise
 
     def __upload__(self, controller, path, filename):
         """
-        Upload Health Rules to given controller
+        Upload the exported Health Rules to given controller
         """
 
         parser = SafeConfigParser()
@@ -49,11 +52,13 @@ class HealthRules(object):
         password = parser.get(controller, 'password')
         appdyurl = parser.get(controller, 'url')
 
-        files = {'file': open(filename, 'rb')}
-
-        upload = requests.post(appdyurl+path, auth=HTTPBasicAuth(username, password), files=files)
-
-        return upload
+        try:
+            files = {'file': open(filename, 'rb')}
+            upload = requests.post(appdyurl+path, auth=HTTPBasicAuth(username, password), files=files)
+            return upload
+        except:
+            print "There was an error submitting the configuration to the controller:\n\n"
+            raise
 
     def __get_applications__(self, controller):
         """
@@ -129,8 +134,12 @@ class HealthRules(object):
 
     def __update_xml__(self, tiers, hrxml, dst_tier):
         """
-        Update XML
+        Update XML and write out new copy to disk
         """
+
+        if not tiers:
+            print "Tiers is empty, cannot continue:"
+            sys.exit(1)
 
         dest_hrxml = hrxml.replace("REFERENCE-APPLICATION-"+dst_tier, tiers[0])
 
@@ -157,7 +166,7 @@ class HealthRules(object):
 
     def __upload_healthrules__(self, controller, dst_app):
         """
-        Upload Healthrules
+        Upload Healthrules to given controller
         """
 
         upload = self.__upload__(controller, '/controller/healthrules/'+dst_app+'?overwrite=true', "healthrules.xml")
@@ -166,21 +175,22 @@ class HealthRules(object):
 
 if __name__ == '__main__':
 
-    args_parse = argparse.ArgumentParser(prog='healthrules.py', usage='%(prog)s [dst_controller] [dst_app] [dst_tier]')
-    args_parse.add_argument('dst_controller', help=' Destination controller to connect to, i.e. production1')
-    args_parse.add_argument('dst_app', help='Destination application to copy to, i.e. APP1')
-    args_parse.add_argument('dst_tier', help='Destination tier i.e. TIER1')
+    args_parse = argparse.ArgumentParser(prog='healthrules.py', usage='%(prog)s [src_controller] [src_app] '
+                                                                      '[dst_controller] [dst_app] [dst_tier]')
+    args_parse.add_argument('src_controller', help='Source controller to connect to, i.e. production1')
+    args_parse.add_argument('src_app', help='Source application to copy from, i.e. APP1')
+    args_parse.add_argument('dst_controller', help='Destination controller to connect to, i.e. production2')
+    args_parse.add_argument('dst_app', help='Destination application to copy to, i.e. APP2')
+    args_parse.add_argument('dst_tier', help='Destination tier i.e. TIER2')
     argument = args_parse.parse_args()
 
     hr = HealthRules()
 
-    src_controller = "staging"
-    src_app = "REFERENCE-APPLICATION"
+    src_controller = argument.src_controller
+    src_app = argument.src_app
 
     hrxml = hr.__export_healthrule__(src_controller, src_app)
     tiers = hr.__get_tiers__(argument.dst_controller, argument.dst_app, argument.dst_tier)
 
     hr.__update_xml__(tiers, hrxml, argument.dst_tier)
     hr.__upload_healthrules__(argument.dst_controller, argument.dst_app)
-
-
